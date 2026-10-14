@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sudoku</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2f6fed">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{--bg:#f6f4ef;--surf:#fff;--tx:#1f2430;--mut:#6b7080;--ln:#c9ccd6;--bold:#1f2430;--acc:#2f6fed;--accs:#dbe6ff;--peer:#eef1f8;--same:#cfdcff;--err:#d93a3a;--errbg:#fde3e3;--ok:#1f9d55;--gv:#f0eee8;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14161c;--surf:#1d2029;--tx:#e8eaf0;--mut:#9aa0b0;--ln:#454a5a;--bold:#e8eaf0;--acc:#6b9bff;--accs:#2b3a62;--peer:#252938;--same:#34457a;--err:#ff6b6b;--errbg:#4a2328;--ok:#4cd68b;--gv:#262a36}}
+:root[data-theme="dark"]{--bg:#14161c;--surf:#1d2029;--tx:#e8eaf0;--mut:#9aa0b0;--ln:#454a5a;--bold:#e8eaf0;--acc:#6b9bff;--accs:#2b3a62;--peer:#252938;--same:#34457a;--err:#ff6b6b;--errbg:#4a2328;--ok:#4cd68b;--gv:#262a36}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;justify-content:center}
+main{width:100%;max-width:480px;padding:14px 12px 28px}
+h1{font-size:22px;margin:4px 0 10px;letter-spacing:.5px}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1}
+button{font:inherit;color:var(--tx);background:var(--surf);border:1px solid var(--ln);border-radius:10px;padding:9px 8px;cursor:pointer}
+button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+button:active{transform:scale(.97)}
+.row{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap}
+.row button{flex:1;min-width:80px;font-size:14px}
+.info{display:flex;justify-content:space-between;color:var(--mut);font-size:14px;margin:6px 2px}
+#board{display:grid;grid-template-columns:repeat(9,1fr);width:100%;aspect-ratio:1;border:2px solid var(--bold);background:var(--surf);touch-action:manipulation;user-select:none}
+.c{position:relative;display:flex;align-items:center;justify-content:center;border:1px solid var(--ln);font-size:clamp(18px,6.2vw,30px);cursor:pointer;color:var(--acc);min-width:0}
+.c:nth-child(9n+3),.c:nth-child(9n+6){border-right:2px solid var(--bold)}
+.c:nth-child(n+19):nth-child(-n+27),.c:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid var(--bold)}
+.c.g{color:var(--bold);font-weight:700;background:var(--gv)}
+.c.p{background:var(--peer)}.c.s{background:var(--same)}.c.sel{background:var(--accs);outline:2px solid var(--acc);outline-offset:-2px;z-index:1}
+.c.g.p{background:var(--peer)}.c.g.s{background:var(--same)}.c.g.sel{background:var(--accs)}
+.c.r{color:#c2570c}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .c.r{color:#ffb454}}
+:root[data-theme="dark"] .c.r{color:#ffb454}
+.c.e{color:var(--err);background:var(--errbg)}
+.n{display:grid;grid-template-columns:repeat(3,1fr);width:100%;height:100%;font-size:clamp(8px,2.4vw,11px);color:var(--mut);text-align:center;line-height:1}
+.n span{display:flex;align-items:center;justify-content:center}
+#pad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+#pad button{font-size:22px;padding:12px 0}
+#msg{min-height:22px;margin:10px 2px 0;font-size:15px}
+#msg.big{text-align:center;white-space:pre-line;font-size:15px;padding:8px 0}
+#msg.big::first-line{font-size:34px;font-weight:800;letter-spacing:2px}
+#msg.bad{color:var(--err)}#msg.good{color:var(--ok);font-weight:600}
+.hint{color:var(--mut);font-size:13.5px;line-height:1.45;margin:4px 2px 8px}
+.hid{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>🧩 Sudoku</h1>
+<div class="tabs">
+  <button id="t-new" class="on">Yeni Oyun</button>
+  <button id="t-paper">Gazete / Dergi</button>
+</div>
+
+<div id="p-new">
+  <div class="row">
+    <button id="d-kolay">Yeni Kolay</button>
+    <button id="d-zor">Yeni Zor</button>
+  </div>
+</div>
+<div id="p-paper" class="hid">
+  <p class="hint">Gazete veya dergideki sudokuyu girin: bir kare seçip rakamı yazın. Küçük rakamlar (notlar) için önce <b>✏️ Not</b> düğmesini açın. Sonra <b>Oyna</b> ile kendiniz çözün ya da <b>Otomatik Çöz</b> ile cevabı görün.</p>
+  <div class="row">
+    <button id="b-play">▶ Oyna</button>
+    <button id="b-auto">⚡ Otomatik Çöz</button>
+    <button id="b-clear">Temizle</button>
+  </div>
+</div>
+
+<div class="info"><span id="lvl">Kolay</span><span id="time">00:00</span></div>
+<div id="board"></div>
+<div id="msg"></div>
+<div id="pad"></div>
+<div class="row" id="tools">
+  <button id="b-notes">✏️ Not: Kapalı</button>
+  <button id="b-undo">↩ Geri Al</button>
+  <button id="b-hint">💡 İpucu</button>
+  <button id="b-check">✔ Kontrol</button>
+  <button id="b-sol">Çözümü Göster</button>
+</div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const PE=[];for(let i=0;i<81;i++){const r=i/9|0,c=i%9,s=new Set();for(let k=0;k<9;k++){s.add(r*9+k);s.add(k*9+c)}const br=r-r%3,bc=c-c%3;for(let a=0;a<3;a++)for(let b=0;b<3;b++)s.add((br+a)*9+bc+b);s.delete(i);PE.push([...s])}
+const pc=x=>{let c=0;while(x){x&=x-1;c++}return c};
+function search(g,limit,rand){
+  const rm=Array(9).fill(0),cm=Array(9).fill(0),bm=Array(9).fill(0),B=i=>((i/27|0)*3)+((i%9)/3|0);
+  for(let i=0;i<81;i++)if(g[i]){const bit=1<<g[i],r=i/9|0,c=i%9,b=B(i);if((rm[r]|cm[c]|bm[b])&bit)return{n:0};rm[r]|=bit;cm[c]|=bit;bm[b]|=bit}
+  const a=g.slice();let n=0,first=null;
+  (function rec(){
+    let best=-1,bc=10,bmask=0;
+    for(let i=0;i<81;i++)if(!a[i]){const m=0x3fe&~(rm[i/9|0]|cm[i%9]|bm[B(i)]),c=pc(m);if(c<bc){bc=c;best=i;bmask=m;if(c===0)return}}
+    if(best<0){n++;if(!first)first=a.slice();return}
+    const ds=[];for(let d=1;d<=9;d++)if(bmask&(1<<d))ds.push(d);
+    if(rand)for(let i=ds.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[ds[i],ds[j]]=[ds[j],ds[i]]}
+    const r=best/9|0,c=best%9,b=B(best);
+    for(const d of ds){const bit=1<<d;a[best]=d;rm[r]|=bit;cm[c]|=bit;bm[b]|=bit;rec();a[best]=0;rm[r]&=~bit;cm[c]&=~bit;bm[b]&=~bit;if(n>=limit)return}
+  })();
+  return{n,sol:first};
+}
+function generate(diff){
+  const full=search(Array(81).fill(0),1,true).sol,p=full.slice(),target=diff==='kolay'?40:27;
+  const order=[...Array(81).keys()].sort(()=>Math.random()-.5);let clues=81;
+  for(const i of order){if(clues<=target)break;const v=p[i];p[i]=0;if(search(p,2).n!==1)p[i]=v;else clues--}
+  return{puzzle:p,full};
+}
+const fresh=()=>({given:Array(81).fill(0),vals:Array(81).fill(0),notes:Array(81).fill(0),sol:null,mode:'enter',hist:[],sec:0,done:false,sel:-1,check:false,lvl:'Gazete / Dergi'});
+const games={new:fresh(),paper:fresh()};let tab='new',cur=games.new,noteMode=false;
+const board=$('#board'),cells=[];
+for(let i=0;i<81;i++){const d=document.createElement('div');d.className='c';d.onclick=()=>{cur.sel=i;render()};board.appendChild(d);cells.push(d)}
+const pad=$('#pad');
+for(let d=1;d<=9;d++){const b=document.createElement('button');b.textContent=d;b.onclick=()=>setDigit(d);pad.appendChild(b)}
+{const b=document.createElement('button');b.textContent='⌫';b.onclick=()=>setDigit(0);pad.appendChild(b)}
+function msg(t,k){const m=$('#msg');m.textContent=t||'';m.className=k||''}
+function conflicts(v){const s=new Set();for(let i=0;i<81;i++)if(v[i])for(const j of PE[i])if(v[j]===v[i]){s.add(i);break}return s}
+function render(){
+  const g=cur,err=conflicts(g.vals),sv=g.sel>=0?g.vals[g.sel]:0;
+  for(let i=0;i<81;i++){
+    const el=cells[i],v=g.vals[i];let c='c';
+    if(g.given[i])c+=' g';
+    if(i===g.sel)c+=' sel';else if(g.sel>=0&&PE[g.sel].includes(i))c+=' p';
+    if(sv&&v===sv&&i!==g.sel)c+=' s';
+    if(err.has(i)||(g.check&&g.sol&&v&&!g.given[i]&&v!==g.sol[i]))c+=' e';
+    else if(v&&g.sel>=0&&(i/9|0)===(g.sel/9|0))c+=' r';
+    el.className=c;
+    if(v)el.textContent=v;
+    else if(g.notes[i]){let h='<div class="n">';for(let d=1;d<=9;d++)h+='<span>'+(g.notes[i]&(1<<d)?d:'')+'</span>';el.innerHTML=h+'</div>'}
+    else el.textContent='';
+  }
+  $('#lvl').textContent=g.lvl;
+  const play=g.mode==='play';
+  $('#p-paper').querySelectorAll('button').forEach(b=>b.style.display=(b.id==='b-clear'||!play)?'':'none');
+  $('#b-clear').style.display='';
+  ['b-notes','b-undo','b-hint','b-check','b-sol'].forEach(id=>$('#'+id).style.display=(id==='b-notes'||play)?'':'none');
+  $('#b-undo').style.display=play?'':'none';
+  $('#b-sol').style.display=(play&&!g.done)?'':'none';
+  tick();
+}
+function snap(){cur.hist.push([cur.vals.slice(),cur.notes.slice()]);if(cur.hist.length>200)cur.hist.shift()}
+function setDigit(d){
+  const g=cur,i=g.sel;if(i<0||g.done)return;
+  g.check=false;
+  if(g.mode==='enter'){
+    if(noteMode&&d){if(g.given[i])return;g.notes[i]^=1<<d}
+    else{g.given[i]=d;g.vals[i]=d;g.notes[i]=0}
+    msg('');render();return}
+  if(g.given[i])return;
+  snap();
+  if(noteMode&&d){if(g.vals[i])return;g.notes[i]^=1<<d}
+  else{g.vals[i]=d;g.notes[i]=0;if(d)for(const j of PE[i])g.notes[j]&=~(1<<d)}
+  msg('');render();finish();
+}
+function finish(){
+  const g=cur;if(g.vals.some(v=>!v)||conflicts(g.vals).size)return;
+  g.done=true;g.sel=-1;msg('TEBRİKLER! 🎉\n'+fmt(g.sec)+' sürede doğru çözdünüz.','good big');render();
+}
+const fmt=s=>String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+function tick(){$('#time').textContent=cur.mode==='play'?fmt(cur.sec):''}
+setInterval(()=>{if(cur.mode==='play'&&!cur.done){cur.sec++;tick()}},1000);
+function newGame(d){
+  msg('Bulmaca hazırlanıyor…');
+  setTimeout(()=>{
+    const {puzzle,full}=generate(d),g=fresh();
+    g.given=puzzle.slice();g.vals=puzzle.slice();g.sol=full;g.mode='play';g.lvl=d==='kolay'?'Kolay':'Zor';
+    games.new=g;cur=g;msg('');render();
+  },30);
+}
+function setTab(t){
+  tab=t;cur=games[t];msg('');
+  $('#t-new').classList.toggle('on',t==='new');$('#t-paper').classList.toggle('on',t==='paper');
+  $('#p-new').classList.toggle('hid',t!=='new');$('#p-paper').classList.toggle('hid',t!=='paper');
+  render();
+}
+function validatePaper(){
+  const g=cur,n=g.given.filter(Boolean).length;
+  if(n<17){msg('En az 17 rakam girmelisiniz (şu an '+n+').','bad');return null}
+  if(conflicts(g.given).size){msg('Aynı satır, sütun veya kutuda tekrar eden rakamlar var (kırmızı). Girişi kontrol edin.','bad');return null}
+  const r=search(g.given,2);
+  if(r.n===0){msg('Bu bulmacanın çözümü yok. Rakamları gazetedekiyle karşılaştırın.','bad');return null}
+  return r;
+}
+$('#t-new').onclick=()=>setTab('new');
+$('#t-paper').onclick=()=>setTab('paper');
+$('#d-kolay').onclick=()=>newGame('kolay');
+$('#d-zor').onclick=()=>newGame('zor');
+$('#b-play').onclick=()=>{
+  const r=validatePaper();if(!r)return;const g=cur;
+  g.sol=r.sol;g.mode='play';g.sel=-1;g.sec=0;g.hist=[];g.vals=g.given.slice();
+  msg(r.n>1?'Not: Bu bulmacanın birden fazla çözümü var; bir rakamı yanlış girmiş olabilirsiniz.':'');render();
+};
+$('#b-auto').onclick=()=>{
+  const r=validatePaper();if(!r)return;const g=cur;
+  g.sol=r.sol;g.vals=r.sol.slice();g.mode='play';g.done=true;g.sel=-1;
+  msg(r.n>1?'Birden fazla çözüm var, biri gösteriliyor. Girişi kontrol edin.':'Çözüm hazır. ✔',r.n>1?'bad':'good');render();
+};
+$('#b-clear').onclick=()=>{
+  if(!confirm('Tahta temizlensin mi?'))return;
+  Object.assign(cur,fresh());msg('');render();
+};
+$('#b-notes').onclick=()=>{noteMode=!noteMode;$('#b-notes').textContent='✏️ Not: '+(noteMode?'Açık':'Kapalı');$('#b-notes').classList.toggle('on',noteMode)};
+$('#b-undo').onclick=()=>{const h=cur.hist.pop();if(!h||cur.done)return;cur.vals=h[0];cur.notes=h[1];cur.check=false;render()};
+$('#b-hint').onclick=()=>{
+  const g=cur;if(g.done||!g.sol)return;let i=g.sel;
+  if(i<0||g.vals[i]===g.sol[i]||g.given[i]){const c=[];for(let k=0;k<81;k++)if(g.vals[k]!==g.sol[k])c.push(k);if(!c.length)return;i=c[Math.random()*c.length|0]}
+  snap();g.sel=i;g.vals[i]=g.sol[i];g.notes[i]=0;g.check=false;render();finish();
+};
+$('#b-check').onclick=()=>{
+  const g=cur;if(g.done)return;g.check=true;
+  const bad=g.vals.some((v,i)=>v&&!g.given[i]&&v!==g.sol[i]);
+  msg(bad?'Kırmızı kareler hatalı.':'Şu ana kadar hata yok. 👍',bad?'bad':'good');render();
+};
+$('#b-sol').onclick=()=>{
+  if(!confirm('Çözüm gösterilsin mi?'))return;
+  cur.vals=cur.sol.slice();cur.notes.fill(0);cur.done=true;cur.sel=-1;msg('Çözüm gösteriliyor.');render();
+};
+document.addEventListener('keydown',e=>{
+  const g=cur;
+  if(e.key>='1'&&e.key<='9')setDigit(+e.key);
+  else if(['0','Backspace','Delete'].includes(e.key))setDigit(0);
+  else if(e.key==='n'||e.key==='N')$('#b-notes').click();
+  else if(e.key.startsWith('Arrow')){e.preventDefault();let i=g.sel<0?40:g.sel,r=i/9|0,c=i%9;
+    if(e.key==='ArrowUp')r=(r+8)%9;if(e.key==='ArrowDown')r=(r+1)%9;if(e.key==='ArrowLeft')c=(c+8)%9;if(e.key==='ArrowRight')c=(c+1)%9;
+    g.sel=r*9+c;render()}
+});
+newGame('kolay');
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
